@@ -1,27 +1,27 @@
-export const PER_PAGE = 15;
+const PER_PAGE = 12;
 
 export default class Pagination {
-  // perPage and page must be private to prevent external modification
+  private readonly perPage: number;
+  private page: number;
+
   constructor(perPage = PER_PAGE) {
     this.perPage = perPage;
     this.page = 1;
   }
 
-  get current() {
-    return this.page;
-  }
-
-  reset() {
+  public reset(): void {
     this.page = 1;
   }
 
-  next() {
-    this.page += 1;
+  public nextPage(): number {
+    return ++this.page;
+  }
+
+  public get currentPage(): number {
     return this.page;
   }
 
-  // Returns true when we've reached or passed the last page based on totalHits
-  isEnd(totalHits) {
-    return this.page * this.perPage >= totalHits;
+  public get itemsPerPage(): number {
+    return this.perPage;
   }
 }
