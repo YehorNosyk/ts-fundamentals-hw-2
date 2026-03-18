@@ -1,76 +1,32 @@
-import { getImagesByQuery } from "./pixabay-api";
-import { initRender } from "./render-functions";
-import Pagination from "./pagination";
+import { getImagesByQuery } from './pixabay-api';
+import { initRender, type RenderElements } from './render-functions';
+import Pagination from './pagination';
+
+const form = document.querySelector<HTMLFormElement>('#search-form')!;
+const input = document.querySelector<HTMLInputElement>('#search-input')!;
+const loadMoreBtn = document.querySelector<HTMLButtonElement>('#load-more')!;
+const gallery = document.querySelector<HTMLDivElement>('.gallery')!;
+
+const elements: RenderElements = { gallery, loadMoreBtn };
+const render = initRender(elements);
 
 const pagination = new Pagination();
-let query = "";
-const searchForm = document.querySelector(".form");
-const loadMoreButton = document.querySelector(".load-more");
-const gallery = document.querySelector(".gallery");
-const loader = document.querySelector(".loader");
+let query: string = '';
 
-if (!searchForm) throw new Error("Missing .form element in HTML");
-if (!loadMoreButton) throw new Error("Missing .load-more element in HTML");
-if (!gallery) throw new Error("Missing .gallery element in HTML");
-if (!loader) throw new Error("Missing .loader element in HTML");
-
-// Initialize render helpers with element instances
-const ui = initRender({ gallery, loader, loadMoreButton });
-
-searchForm.addEventListener("submit", onFormSubmit);
-loadMoreButton.addEventListener("click", onLoadMoreClick);
-
-async function onFormSubmit(event) {
+form.addEventListener('submit', async (event: Event) => {
   event.preventDefault();
-  const form = event.target;
-  const formData = new FormData(form);
-  query = formData.get("search-text").trim();
-
-  if (query === "") {
-    ui.showToast("Please enter a search query.");
-    return;
-  }
-
+  query = input.value.trim();
   pagination.reset();
-  ui.clearGallery();
-  ui.hideLoadMoreButton();
+  render.clearGallery();
   await fetchAndRender();
-  form.reset();
-}
+});
 
-async function onLoadMoreClick() {
-  pagination.next();
-  await fetchAndRender();
-}
+loadMoreBtn.addEventListener('click', fetchAndRender);
 
-async function fetchAndRender() {
-  const isInitial = pagination.current === 1;
-  try {
-    ui.showLoader();
-    ui.hideLoadMoreButton();
-
-    const data = await getImagesByQuery(query, pagination.current);
-
-    if (isInitial && data.hits.length === 0) {
-      ui.showToast(
-        "There are no images matching your search query. Try again!"
-      );
-      return;
-    }
-
-    ui.createGallery(data.hits);
-
-    const isEndOfResults = pagination.isEnd(data.totalHits);
-    if (isEndOfResults) {
-      ui.hideLoadMoreButton();
-      ui.showToast("You've reached the end of search results.");
-      return;
-    }
-
-    ui.showLoadMoreButton();
-  } catch {
-    ui.showToast("An error occurred while fetching images. Try again.");
-  } finally {
-    ui.hideLoader();
-  }
+async function fetchAndRender(): Promise<void> {
+  if (!query) return;
+  const data = await getImagesByQuery(query, pagination.currentPage);
+  render.createGallery(data.hits);
+  pagination.nextPage();
+  loadMoreBtn.style.display = data.hits.length < pagination.itemsPerPage ? 'none' : 'block';
 }
